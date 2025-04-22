@@ -1,37 +1,38 @@
-version: "3.8"
+version: "3.8"  # Docker Compose file format version
+
 services:
   es01:
-    image: "docker.elastic.co/elasticsearch/elasticsearch:8.13.4"
-    container_name: es01
+    image: "docker.elastic.co/elasticsearch/elasticsearch:8.13.4"  # Elasticsearch 8.13.4 image
+    container_name: es01  # Name of the container
     ports:
-      - "9200:9200"
-      - "9300:9300"
+      - "9200:9200"  # REST API port
+      - "9300:9300"  # Transport port for node communication
     environment:
-      - node.name=es01
-      - cluster.name=mycluster
-      - cluster.initial_master_nodes=es01,es02,es03
-      - discovery.seed_hosts=es02,es03
-      - bootstrap.memory_lock=true
-      - xpack.security.enabled=false
-      - xpack.security.enrollment.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - node.name=es01  # Unique name of the node
+      - cluster.name=mycluster  # Cluster name (same for all nodes)
+      - cluster.initial_master_nodes=es01,es02,es03  # Initial master-eligible nodes
+      - discovery.seed_hosts=es02,es03  # Seed hosts to discover other nodes
+      - bootstrap.memory_lock=true  # Prevents memory swapping
+      - xpack.security.enabled=false  # Disable X-Pack security (auth/TLS)
+      - xpack.security.enrollment.enabled=false  # Disable enrollment features
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"  # Set heap size to 512MB min & max
     volumes:
-      - es-data-es01:/usr/share/elasticsearch/data
-    ulimits:
+      - es-data-es01:/usr/share/elasticsearch/data  # Named volume for data persistence
+    ulimits:  # Set memory lock limits to unlimited
       memlock:
         soft: -1
         hard: -1
-    healthcheck:
+    healthcheck:  # Health check to ensure Elasticsearch is running
       test: ["CMD-SHELL", "curl -f http://localhost:9200 || exit 1"]
-      interval: 10s
-      timeout: 10s
-      retries: 10
+      interval: 10s  # Check every 10 seconds
+      timeout: 10s  # Wait up to 10 seconds for a response
+      retries: 10  # Retry up to 10 times before considering unhealthy
 
   es02:
-    image: "docker.elastic.co/elasticsearch/elasticsearch:8.13.4"
+    image: "docker.elastic.co/elasticsearch/elasticsearch:8.13.4"  # Same ES image for second node
     container_name: es02
     ports:
-      - "9201:9200"
+      - "9201:9200"  # Expose second node's REST API on different host port
       - "9301:9300"
     environment:
       - node.name=es02
@@ -55,19 +56,19 @@ services:
       retries: 10
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:8.13.4
+    image: docker.elastic.co/kibana/kibana:8.13.4  # Kibana image compatible with Elasticsearch 8.13.4
     container_name: kibana
-    depends_on:
+    depends_on:  # Wait for both ES nodes to be healthy before starting Kibana
       es01:
         condition: service_healthy
       es02:
         condition: service_healthy
     ports:
-      - "5601:5601"
+      - "5601:5601"  # Expose Kibana web interface
     environment:
-      - ELASTICSEARCH_HOSTS=["http://es01:9200","http://es02:9200"]
+      - ELASTICSEARCH_HOSTS=["http://es01:9200","http://es02:9200"]  # Connect Kibana to both ES nodes
 
 volumes:
-  es-data-es01:
-  es-data-es02:
-  es-data-es03:
+  es-data-es01:  # Named volume for es01
+  es-data-es02:  # Named volume for es02
+  es-data-es03:  # Optional third node volume (not used in this file currently)
